@@ -9,15 +9,35 @@ declare global {
   }
 }
 
-export const loadWeb3 = async (): Promise<void> => {
-  if (window.ethereum) {
-    window.web3 = new Web3(window.ethereum)
-    await window.ethereum.request({ method: 'eth_requestAccounts' })
-  } else if (window.web3) {
-    window.web3 = new Web3(window.web3.currentProvider)
-  } else {
-    window.alert('Non-Ethereum browser detected. You should consider trying MetaMask!')
+export const loadWeb3 = async (): Promise<boolean> => {
+  try {
+    if (window.ethereum) {
+      window.web3 = new Web3(window.ethereum)
+      await window.ethereum.request({ method: 'eth_requestAccounts' })
+      return true
+    } else if (window.web3) {
+      window.web3 = new Web3(window.web3.currentProvider)
+      return true
+    } else {
+      return false
+    }
+  } catch (error) {
+    console.error('Failed to initialize Web3:', error)
+    return false
   }
+}
+
+const hasWeb3Api = (web3: Web3 | undefined): web3 is Web3 =>
+  Boolean(web3?.eth && typeof web3.eth.getChainId === 'function')
+
+let web3Initialization: Promise<boolean> | null = null
+
+const ensureWeb3 = async (): Promise<boolean> => {
+  if (hasWeb3Api(window.web3)) return true
+  web3Initialization ??= loadWeb3().finally(() => {
+    web3Initialization = null
+  })
+  return web3Initialization
 }
 
 export const getActiveAccount = async (): Promise<string> => {
@@ -37,11 +57,17 @@ export const getActiveAccount = async (): Promise<string> => {
 }
 
 export const getContract = async () => {
-  if (!window.web3) {
-    await loadWeb3()
+  if (!hasWeb3Api(window.web3)) {
+    const initialized = await ensureWeb3()
+    if (!initialized) {
+      throw new Error('MetaMask is not installed or connected. Please install MetaMask, then refresh the page and try again.')
+    }
   }
 
-  const web3 = window.web3!
+  const web3 = window.web3
+  if (!hasWeb3Api(web3)) {
+    throw new Error('Web3 is not available. Please connect MetaMask, then refresh the page and try again.')
+  }
   // Use EIP-155 chainId (NOT "network id") to match deployments.json keys.
   // Ganache commonly reports network id 5777 while chainId is 1337 (or vice versa).
   const chainId = await web3.eth.getChainId()
@@ -92,9 +118,7 @@ export const switchToNetwork = async (chainId: string | number) => {
                 symbol: 'ETH',
                 decimals: 18,
               },
-              rpcUrls: chainIdNum === 1337 || chainIdNum === 5777
-                ? ['http://127.0.0.1:7545'] 
-                : ['http://127.0.0.1:8545'],
+              rpcUrls: ['http://127.0.0.1:7545'],
             },
           ],
         })

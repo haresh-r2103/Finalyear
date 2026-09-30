@@ -33,6 +33,7 @@ type ChainContract = Awaited<ReturnType<typeof getContract>>['contract']
 type TraceStageRow = {
   label: string
   data?: Role
+  completed?: boolean
   showArrow?: boolean
   icon?: ReactElement
 }
@@ -122,7 +123,7 @@ function TrackMaterialsPanel({
                 <div className="ml-6 flex-1 rounded-xl border border-border bg-muted/30 p-6 shadow-sm transition-shadow hover:shadow-md dark:bg-muted/20">
                   <h5 className="mb-3 flex flex-wrap items-center gap-2 text-lg font-bold text-foreground">
                     {stage.label}
-                    {stage.data && (
+                    {(stage.data || stage.completed) && (
                       <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2 py-1 text-xs font-semibold text-green-700 dark:text-green-300">
                         ✓ Completed
                       </span>
@@ -146,6 +147,10 @@ function TrackMaterialsPanel({
                         <div className="mb-1 text-xs text-muted-foreground">Address</div>
                         <div className="break-all font-mono text-xs text-foreground/90">{stage.data.addr}</div>
                       </div>
+                    </div>
+                  ) : stage.completed ? (
+                    <div className="rounded border-l-4 border-green-500/55 bg-green-500/10 p-4 dark:bg-green-500/15">
+                      <p className="font-medium text-green-900 dark:text-green-100">Sale confirmed on chain</p>
                     </div>
                   ) : (
                     <div className="rounded border-l-4 border-amber-500/55 bg-amber-500/10 p-4 dark:bg-amber-500/15">
@@ -429,6 +434,7 @@ export default function TrackMaterials() {
             },
             {
               label: 'Sold',
+              completed: true,
               showArrow: false,
               icon: stageIcons.sold,
             },

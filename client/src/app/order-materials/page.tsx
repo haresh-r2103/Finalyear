@@ -112,9 +112,10 @@ export default function OrderMaterials() {
       }
       const account = await getActiveAccount()
       setCurrentAccount(account)
+      console.info('Requesting MetaMask confirmation for product transaction.')
       const receipt = await supplyChain.methods.addProduct(productName, productDescription).send({ from: account })
       if (receipt) {
-        void loadBlockchainData()
+        await loadBlockchainData()
         setProductName('')
         setProductDescription('')
         showNotification('Product added on chain.', 'success')
