@@ -17,6 +17,15 @@ describe('SupplyChain', () => {
     expect(contractOwner).to.equal(owner.address)
   })
 
+  it('rejects role registration from non-owners', async () => {
+    const { supplyChain, supplier } = await deployFixture()
+
+    await expect(
+      supplyChain.connect(supplier).addSupplier(supplier.address, 'Acme Supply', 'City'),
+    ).to.be.revertedWith('Only owner')
+    expect(await supplyChain.supplierCtr()).to.equal(0n)
+  })
+
   it('reverts addProduct when roles are not registered', async () => {
     const { supplyChain, producer } = await deployFixture()
 
@@ -76,7 +85,7 @@ describe('SupplyChain', () => {
   })
 
   it('reverts when a non-supplier tries to supply a product', async () => {
-    const { supplyChain, owner, supplier, producer, distributor, seller, other } = await deployFixture()
+    const { supplyChain, owner, supplier, producer, distributor, seller } = await deployFixture()
 
     await supplyChain.connect(owner).addSupplier(supplier.address, 'Acme Supply', 'City')
     await supplyChain.connect(owner).addProducer(producer.address, 'Fab Inc', 'City')
@@ -84,6 +93,23 @@ describe('SupplyChain', () => {
     await supplyChain.connect(owner).addSeller(seller.address, 'Retail One', 'City')
     await supplyChain.connect(producer).addProduct('Steel coil', 'Batch A')
 
-    await expect(supplyChain.connect(other).supplyProduct(1)).to.be.reverted
+    await expect(supplyChain.connect(producer).supplyProduct(1)).to.be.revertedWith('Not supplier')
+    expect(await supplyChain.showStage(1)).to.equal('Product Created')
+  })
+
+  it('rejects out-of-order stage transitions without changing the product stage', async () => {
+    const { supplyChain, owner, supplier, producer, distributor, seller } = await deployFixture()
+
+    await supplyChain.connect(owner).addSupplier(supplier.address, 'Acme Supply', 'City')
+    await supplyChain.connect(owner).addProducer(producer.address, 'Fab Inc', 'City')
+    await supplyChain.connect(owner).addDistributor(distributor.address, 'LogiCo', 'City')
+    await supplyChain.connect(owner).addSeller(seller.address, 'Retail One', 'City')
+    await supplyChain.connect(producer).addProduct('Steel coil', 'Batch A')
+
+    await expect(supplyChain.connect(producer).processProduct(1)).to.be.revertedWith('Wrong stage')
+    expect(await supplyChain.showStage(1)).to.equal('Product Created')
+
+    await expect(supplyChain.connect(seller).listForSale(1)).to.be.revertedWith('Wrong stage')
+    expect(await supplyChain.showStage(1)).to.equal('Product Created')
   })
 })

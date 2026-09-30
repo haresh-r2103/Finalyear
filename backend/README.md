@@ -70,6 +70,10 @@ After deployment, update `client/src/deployments.json` with the deployed contrac
 npm test
 ```
 
+### Research Test Evidence
+
+The test suite checks role authorization, valid stage progression, and rejection of unauthorized or out-of-order state changes. See [research/RESULTS.md](research/RESULTS.md) for the captured test and gas results, methodology, and limitations. Re-run `npm test` from this directory to reproduce the output.
+
 ## Frontend Development
 
 1. Navigate to the client directory:
